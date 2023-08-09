@@ -360,8 +360,19 @@ class NextLayer:
         self, context: Context, hosts: Iterable[re.Pattern]
     ) -> bool:
         return any(
-            (context.server.address and rex.search(context.server.address[0]))
+            context.server.address and (
+                rex.search(context.server.address[0])
+                or rex.search(
+                    f"{context.server.address[0]}:{context.server.address[1]}"
+                )
+            )
             or (context.client.sni and rex.search(context.client.sni))
+            or (
+                context.server.address and context.client.sni
+                and rex.search(
+                    f"{context.client.sni}:{context.server.address[1]}"
+                )
+            )
             for rex in hosts
         )
 
