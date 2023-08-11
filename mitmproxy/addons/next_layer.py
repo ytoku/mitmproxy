@@ -212,14 +212,21 @@ class NextLayer:
             return False
 
         hostnames: list[str] = []
+        port: int | None = None
         if context.server.peername and (peername := context.server.peername[0]):
             hostnames.append(peername)
+            port = context.server.peername[1]
+            hostnames.append(f"{peername}:{port}")
         if context.server.address and (server_address := context.server.address[0]):
             hostnames.append(server_address)
+            port = context.server.address[1]
+            hostnames.append(f"{server_address}:{port}")
         if (
             client_hello := self._get_client_hello(context, data_client)
         ) and client_hello.sni:
             hostnames.append(client_hello.sni)
+            if port is not None:
+                hostnames.append(f"{client_hello.sni}:{port}")
 
         if not hostnames:
             return False
