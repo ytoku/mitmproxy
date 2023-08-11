@@ -366,21 +366,20 @@ class NextLayer:
     def _is_destination_in_hosts(
         self, context: Context, hosts: Iterable[re.Pattern]
     ) -> bool:
+        hostnames: list[str] = []
+        port: int | None = None
+        if context.server.address:
+            servername, port = context.server.address
+            hostnames.append(servername)
+            hostnames.append(f"{servername}:{port}")
+        if sni := context.client.sni:
+            hostnames.append(sni)
+            if port is not None:
+                hostnames.append(f"{sni}:{port}")
         return any(
-            context.server.address and (
-                rex.search(context.server.address[0])
-                or rex.search(
-                    f"{context.server.address[0]}:{context.server.address[1]}"
-                )
-            )
-            or (context.client.sni and rex.search(context.client.sni))
-            or (
-                context.server.address and context.client.sni
-                and rex.search(
-                    f"{context.client.sni}:{context.server.address[1]}"
-                )
-            )
+            rex.search(hostname)
             for rex in hosts
+            for hostname in hostnames
         )
 
 
