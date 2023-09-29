@@ -35,8 +35,15 @@ export var formatTimeStamp = function (
     seconds: number,
     { milliseconds = true } = {}
 ) {
-    let utc = new Date(seconds * 1000);
-    let ts = utc.toISOString().replace("T", " ").replace("Z", "");
+    let dt = new Date(seconds * 1000);
+    let year = dt.getFullYear();
+    let month = (1 + dt.getMonth()).toString().padStart(2, "0");
+    let day = dt.getDate().toString().padStart(2, "0");
+    let hours = dt.getHours().toString().padStart(2, "0");
+    let minutes = dt.getMinutes().toString().padStart(2, "0");
+    let part_seconds = dt.getSeconds().toString().padStart(2, "0");
+    let part_milliseconds = dt.getMilliseconds().toString().padStart(3, "0");
+    let ts = `${year}-${month}-${day} ${hours}:${minutes}:${part_seconds}.${part_milliseconds}`;
     if (!milliseconds) ts = ts.slice(0, -4);
     return ts;
 };
