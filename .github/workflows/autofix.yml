@@ -15,10 +15,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: install-pinned/ruff@8e23c2ad6e5fef4f7451bbdbc1ad068881096aeb
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .github/python-version.txt
+      - run: pip install -e .[dev]
       - run: ruff --fix-only .
       - run: ruff format .
 
+      - run: web/gen/all
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .github/node-version.txt
       - name: Run prettier
         run: |
           npm ci

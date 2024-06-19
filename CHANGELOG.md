@@ -9,6 +9,27 @@
 
 
 
+## 12 June 2024: mitmproxy 10.3.1
+
+* Release tags are now prefixed with `v` again to follow SemVer convention.
+  ([#6810](https://github.com/mitmproxy/mitmproxy/pull/6810), @mhils)
+* Fix a bug where mitmproxy would not exit when `-n` is passed.
+  ([#6819](https://github.com/mitmproxy/mitmproxy/pull/6819), @mhils)
+* Set the `unbuffered` (stdout/stderr) flag for the `mitmdump` PyInstaller build.
+  ([#6821](https://github.com/mitmproxy/mitmproxy/pull/6821), @Prinzhorn)
+* Fix a bug where client replay would not work with proxyauth.
+  ([#6866](https://github.com/mitmproxy/mitmproxy/pull/6866), @mhils)
+* Fix slowdown when sending large amounts of data over HTTP/2.
+  ([#6875](https://github.com/mitmproxy/mitmproxy/pull/6875), @aib)
+* Add an option to strip HTTPS records from DNS responses to block encrypted ClientHellos.
+  ([#6876](https://github.com/mitmproxy/mitmproxy/pull/6876), @errorxyz)
+* Add an API to parse HTTPS records from DNS RDATA.
+  ([#6884](https://github.com/mitmproxy/mitmproxy/pull/6884), @errorxyz)
+* Fix flow export in mitmweb for Safari
+  ([#6917](https://github.com/mitmproxy/mitmproxy/pull/6917), @mhils, @canyesilyurt)
+* Releases now come with a Sigstore attestations file to demonstrate build provenance.
+  ([f05c050](https://github.com/mitmproxy/mitmproxy/commit/f05c050f615b9ab9963707944c893bc94e738525), @mhils)
+
 ## 17 April 2024: mitmproxy 10.3.0
 
 * Add support for editing non text files in a hex editor
@@ -20,7 +41,7 @@
 * Fix multipart form content view being unusable.
   ([#6653](https://github.com/mitmproxy/mitmproxy/pull/6653), @DaniElectra)
 * Documentation Improvements on CA Certificate Generation
-  ([#5370](https://github.com/mitmproxy/mitmproxy/pull/5370), @zioalex)  
+  ([#5370](https://github.com/mitmproxy/mitmproxy/pull/5370), @zioalex)
 * Make it possible to read flows from stdin with mitmweb.
   ([#6732](https://github.com/mitmproxy/mitmproxy/pull/6732), @jaywor1)
 * Update aioquic dependency to >= 1.0.0, < 2.0.0.
