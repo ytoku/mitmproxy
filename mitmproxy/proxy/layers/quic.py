@@ -22,7 +22,6 @@ from aioquic.quic.connection import stream_is_unidirectional
 from aioquic.quic.packet import encode_quic_version_negotiation
 from aioquic.quic.packet import PACKET_TYPE_INITIAL
 from aioquic.quic.packet import pull_quic_header
-from aioquic.quic.packet import QuicProtocolVersion
 from aioquic.tls import CipherSuite
 from aioquic.tls import HandshakeType
 from cryptography import x509
@@ -50,6 +49,8 @@ from mitmproxy.proxy.layers.udp import UDPLayer
 from mitmproxy.tls import ClientHello
 from mitmproxy.tls import ClientHelloData
 from mitmproxy.tls import TlsData
+
+SUPPORTED_QUIC_VERSIONS_SERVER = QuicConfiguration(is_client=False).supported_versions
 
 
 @dataclass
@@ -1147,7 +1148,10 @@ class ClientQuicLayer(QuicLayer):
     def receive_handshake_data(
         self, data: bytes
     ) -> layer.CommandGenerator[tuple[bool, str | None]]:
-        if isinstance(self.context.layers[0], TransparentProxy):  # pragma: no cover
+        if (
+            isinstance(self.context.layers[0], TransparentProxy)
+            and not self.context.options.experimental_transparent_http3
+        ):  # pragma: no cover
             yield commands.Log(
                 f"Swallowing QUIC handshake because HTTP/3 does not support transparent mode yet.",
                 DEBUG,
@@ -1173,18 +1177,16 @@ class ClientQuicLayer(QuicLayer):
             return False, f"Cannot parse QUIC header: {e} ({data.hex()})"
 
         # negotiate version, support all versions known to aioquic
-        supported_versions = [
-            version.value
-            for version in QuicProtocolVersion
-            if version is not QuicProtocolVersion.NEGOTIATION
-        ]
-        if header.version is not None and header.version not in supported_versions:
+        if (
+            header.version is not None
+            and header.version not in SUPPORTED_QUIC_VERSIONS_SERVER
+        ):
             yield commands.SendData(
                 self.tunnel_connection,
                 encode_quic_version_negotiation(
                     source_cid=header.destination_cid,
                     destination_cid=header.source_cid,
-                    supported_versions=supported_versions,
+                    supported_versions=SUPPORTED_QUIC_VERSIONS_SERVER,
                 ),
             )
             return False, None

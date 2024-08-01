@@ -150,9 +150,7 @@ class TestTlsConfig:
 
             with open(tdata.path("mitmproxy/data/invalid-subject.pem"), "rb") as f:
                 ctx.server.certificate_list = [certs.Cert.from_pem(f.read())]
-            with pytest.warns(
-                UserWarning, match="Country names should be two characters"
-            ):
+            with pytest.warns(UserWarning):
                 assert ta.get_cert(ctx)  # does not raise
 
     def test_tls_clienthello(self):
@@ -389,12 +387,14 @@ class TestTlsConfig:
                 assert ctx.server.alpn_offers == expected
 
             assert_alpn(
-                True, proxy_tls.HTTP_ALPNS + (b"foo",), proxy_tls.HTTP_ALPNS + (b"foo",)
+                True,
+                (proxy_tls.HTTP2_ALPN, *proxy_tls.HTTP1_ALPNS, b"foo"),
+                (proxy_tls.HTTP2_ALPN, *proxy_tls.HTTP1_ALPNS, b"foo"),
             )
             assert_alpn(
                 False,
-                proxy_tls.HTTP_ALPNS + (b"foo",),
-                proxy_tls.HTTP1_ALPNS + (b"foo",),
+                (proxy_tls.HTTP2_ALPN, *proxy_tls.HTTP1_ALPNS, b"foo"),
+                (*proxy_tls.HTTP1_ALPNS, b"foo"),
             )
             assert_alpn(True, [], [])
             assert_alpn(False, [], [])

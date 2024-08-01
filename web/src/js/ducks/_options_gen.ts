@@ -21,11 +21,15 @@ export interface OptionsState {
     connection_strategy: string;
     console_focus_follow: boolean;
     content_view_lines_cutoff: number;
+    dns_name_servers: string[];
+    dns_use_hosts_file: boolean;
+    experimental_transparent_http3: boolean;
     export_preserve_original_ip: boolean;
     hardump: string;
     http2: boolean;
     http2_ping_keepalive: number;
     http3: boolean;
+    http_connect_send_host_header: boolean;
     ignore_hosts: string[];
     intercept: string | undefined;
     intercept_active: boolean;
@@ -118,11 +122,15 @@ export const defaultState: OptionsState = {
     connection_strategy: "eager",
     console_focus_follow: false,
     content_view_lines_cutoff: 512,
+    dns_name_servers: [],
+    dns_use_hosts_file: true,
+    experimental_transparent_http3: false,
     export_preserve_original_ip: false,
     hardump: "",
     http2: true,
     http2_ping_keepalive: 58,
     http3: true,
+    http_connect_send_host_header: true,
     ignore_hosts: [],
     intercept: undefined,
     intercept_active: false,

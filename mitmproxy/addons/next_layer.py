@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import re
-import struct
 import sys
 from collections.abc import Iterable
 from collections.abc import Sequence
@@ -27,7 +26,6 @@ from typing import Any
 from typing import cast
 
 from mitmproxy import ctx
-from mitmproxy import dns
 from mitmproxy.net.tls import starts_like_dtls_record
 from mitmproxy.net.tls import starts_like_tls_record
 from mitmproxy.proxy import layer
@@ -167,25 +165,29 @@ class NextLayer:
 
         # 5)  Handle application protocol
         # 5a) Is it DNS?
-        if udp_based:
-            try:
-                # TODO: DNS over TCP
-                dns.Message.unpack(data_client)  # TODO: perf
-            except struct.error:
-                pass
-            else:
-                return layers.DNSLayer(context)
-        # 5b) We have no other specialized layers for UDP, so we fall back to raw forwarding.
+        if context.server.address and context.server.address[1] in (53, 5353):
+            return layers.DNSLayer(context)
+
+        # 5b) Do we have a known ALPN negotiation?
+        if context.client.alpn in HTTP_ALPNS:
+            explicit_quic_proxy = (
+                isinstance(context.client.proxy_mode, modes.ReverseMode)
+                and context.client.proxy_mode.scheme == "quic"
+            )
+            if not explicit_quic_proxy:
+                return layers.HttpLayer(context, HTTPMode.transparent)
+
+        # 5c) We have no other specialized layers for UDP, so we fall back to raw forwarding.
         if udp_based:
             return layers.UDPLayer(context)
-        # 5b) Check for raw tcp mode.
-        very_likely_http = context.client.alpn in HTTP_ALPNS
-        probably_no_http = not very_likely_http and (
+        # 5d) Check for raw tcp mode.
+        probably_no_http = (
             # the first three bytes should be the HTTP verb, so A-Za-z is expected.
             len(data_client) < 3
             or not data_client[:3].isalpha()
             # a server greeting would be uncharacteristic.
             or data_server
+            or data_client.startswith(b"SSH")
         )
         if ctx.options.rawtcp and probably_no_http:
             return layers.TCPLayer(context)
@@ -232,6 +234,9 @@ class NextLayer:
                 client_hello := self._get_client_hello(context, data_client)
             ) and client_hello.sni:
                 hostnames.append(f"{client_hello.sni}:{port}")
+            if context.client.sni:
+                # Hostname may be allowed, TLS is already established, and we have another next layer decision.
+                hostnames.append(f"{context.client.sni}:{port}")
 
         if not hostnames:
             return False

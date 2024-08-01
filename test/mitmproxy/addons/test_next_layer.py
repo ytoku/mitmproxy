@@ -22,6 +22,7 @@ from mitmproxy.proxy.layers import ClientTLSLayer
 from mitmproxy.proxy.layers import DNSLayer
 from mitmproxy.proxy.layers import HttpLayer
 from mitmproxy.proxy.layers import modes
+from mitmproxy.proxy.layers import QuicStreamLayer
 from mitmproxy.proxy.layers import RawQuicLayer
 from mitmproxy.proxy.layers import ServerQuicLayer
 from mitmproxy.proxy.layers import ServerTLSLayer
@@ -29,6 +30,8 @@ from mitmproxy.proxy.layers import TCPLayer
 from mitmproxy.proxy.layers import UDPLayer
 from mitmproxy.proxy.layers.http import HTTPMode
 from mitmproxy.proxy.layers.http import HttpStream
+from mitmproxy.proxy.layers.tls import HTTP1_ALPNS
+from mitmproxy.proxy.layers.tls import HTTP3_ALPN
 from mitmproxy.proxy.mode_specs import ProxyMode
 from mitmproxy.test import taddons
 
@@ -287,6 +290,24 @@ class TestNextLayer:
                 [],
                 ["example.com"],
                 "tcp",
+                "192.0.2.1",
+                client_hello_with_extensions,
+                False,
+                id="allow: sni",
+            ),
+            pytest.param(
+                [],
+                ["existing-sni.example"],
+                "tcp",
+                "192.0.2.1",
+                b"",
+                False,
+                id="allow: sni from parent layer",
+            ),
+            pytest.param(
+                [],
+                ["example.com"],
+                "tcp",
                 "decoy",
                 client_hello_with_extensions,
                 False,
@@ -329,7 +350,11 @@ class TestNextLayer:
             if allow:
                 tctx.configure(nl, allow_hosts=allow)
             ctx = Context(
-                Client(peername=("192.168.0.42", 51234), sockname=("0.0.0.0", 8080)),
+                Client(
+                    peername=("192.168.0.42", 51234),
+                    sockname=("0.0.0.0", 8080),
+                    sni="existing-sni.example",
+                ),
                 tctx.options,
             )
             ctx.client.transport_protocol = transport_protocol
@@ -391,6 +416,7 @@ class TConf:
     udp_hosts: Sequence[str] = ()
     ignore_conn: bool = False
     server_address: Address | None = None
+    alpn: bytes | None = None
 
 
 explicit_proxy_configs = [
@@ -596,6 +622,28 @@ reverse_proxy_configs.extend(
         ),
         pytest.param(
             TConf(
+                before=[
+                    modes.ReverseProxy,
+                    ServerQuicLayer,
+                    ClientQuicLayer,
+                    RawQuicLayer,
+                    lambda ctx: QuicStreamLayer(ctx, False, 0),
+                ],
+                after=[
+                    modes.ReverseProxy,
+                    ServerQuicLayer,
+                    ClientQuicLayer,
+                    RawQuicLayer,
+                    QuicStreamLayer,
+                    TCPLayer,
+                ],
+                proxy_mode="reverse:quic://example.com",
+                alpn=HTTP3_ALPN,
+            ),
+            id="reverse proxy: quic",
+        ),
+        pytest.param(
+            TConf(
                 before=[modes.ReverseProxy],
                 after=[modes.ReverseProxy, TCPLayer],
                 proxy_mode=f"reverse:http://example.com",
@@ -654,6 +702,24 @@ transparent_proxy_configs = [
         id="transparent proxy: http",
     ),
     pytest.param(
+        TConf(
+            before=[modes.TransparentProxy, ServerTLSLayer, ClientTLSLayer],
+            after=[modes.TransparentProxy, ServerTLSLayer, ClientTLSLayer, HttpLayer],
+            data_client=b"GO /method-too-short-for-heuristic HTTP/1.1\r\n",
+            alpn=HTTP1_ALPNS[0],
+        ),
+        id=f"transparent proxy: http via ALPN",
+    ),
+    pytest.param(
+        TConf(
+            before=[modes.TransparentProxy],
+            after=[modes.TransparentProxy, TCPLayer],
+            server_address=("192.0.2.1", 23),
+            data_client=b"SSH-2.0-OpenSSH_9.7",
+        ),
+        id="transparent proxy: ssh",
+    ),
+    pytest.param(
         dataclasses.replace(
             http,
             tcp_hosts=["192.0.2.1"],
@@ -674,19 +740,27 @@ transparent_proxy_configs = [
         udp := TConf(
             before=[modes.TransparentProxy],
             after=[modes.TransparentProxy, UDPLayer],
-            server_address=("192.0.2.1", 53),
+            server_address=("192.0.2.1", 553),
             transport_protocol="udp",
             data_client=b"\xff",
         ),
         id="transparent proxy: raw udp",
     ),
     pytest.param(
-        dataclasses.replace(
+        dns := dataclasses.replace(
             udp,
             after=[modes.TransparentProxy, DNSLayer],
             data_client=dns_query,
+            server_address=("192.0.2.1", 53),
         ),
-        id="transparent proxy: dns",
+        id="transparent proxy: dns over udp",
+    ),
+    pytest.param(
+        dataclasses.replace(
+            dns,
+            transport_protocol="tcp",
+        ),
+        id="transparent proxy: dns over tcp",
     ),
     pytest.param(
         dataclasses.replace(
@@ -732,7 +806,11 @@ def test_next_layer(
         )
 
         ctx = Context(
-            Client(peername=("192.168.0.42", 51234), sockname=("0.0.0.0", 8080)),
+            Client(
+                peername=("192.168.0.42", 51234),
+                sockname=("0.0.0.0", 8080),
+                alpn=test_conf.alpn,
+            ),
             tctx.options,
         )
         ctx.server.address = test_conf.server_address

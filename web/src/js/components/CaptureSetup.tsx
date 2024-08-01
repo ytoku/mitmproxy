@@ -28,7 +28,7 @@ export default function CaptureSetup() {
                 {configure_action_text}
             </p>
             <ul className="fa-ul">
-                {servers.map((server, i) => (
+                {servers.map((server) => (
                     <li key={server.full_spec}>
                         <ServerDescription {...server} />
                     </li>
@@ -67,7 +67,7 @@ export function ServerDescription({
         (listen_addrs.length === 2 &&
             listen_addrs[0][1] === listen_addrs[1][1]);
     const unbound = listen_addrs.every((addr) =>
-        ["::", "0.0.0.0"].includes(addr[0])
+        ["::", "0.0.0.0"].includes(addr[0]),
     );
     if (all_same_port && unbound) {
         listen_str = formatAddress(["*", listen_addrs[0][1]]);
