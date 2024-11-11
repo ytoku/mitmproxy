@@ -7,8 +7,9 @@ export function TBackendState(): Required<BackendState> {
             "Auto",
             "Raw"
         ],
-        "servers": [
-            {
+        "platform": "darwin",
+        "servers": {
+            "regular": {
                 "description": "HTTP(S) proxy",
                 "full_spec": "regular",
                 "is_running": true,
@@ -25,7 +26,7 @@ export function TBackendState(): Required<BackendState> {
                 ],
                 "type": "regular"
             },
-            {
+            "reverse:example.com": {
                 "description": "reverse proxy to example.com",
                 "full_spec": "reverse:example.com",
                 "is_running": false,
@@ -33,7 +34,7 @@ export function TBackendState(): Required<BackendState> {
                 "listen_addrs": [],
                 "type": "reverse"
             },
-            {
+            "socks5": {
                 "description": "SOCKS v5 proxy",
                 "full_spec": "socks5",
                 "is_running": false,
@@ -41,7 +42,7 @@ export function TBackendState(): Required<BackendState> {
                 "listen_addrs": [],
                 "type": "socks5"
             }
-        ],
+        },
         "version": "1.2.3"
     }
 }

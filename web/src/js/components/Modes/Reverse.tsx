@@ -1,44 +1,33 @@
 import * as React from "react";
-import { ModeToggle } from "./ModeToggle";
-import Dropdown, { MenuItem } from "../common/Dropdown";
 import { useAppDispatch, useAppSelector } from "../../ducks";
 import {
+    addServer,
+    removeServer,
+    setActive,
     setDestination,
-    setListenConfig,
+    setListenHost,
+    setListenPort,
     setProtocol,
-    toggleReverse,
 } from "../../ducks/modes/reverse";
-import ValueEditor from "../editors/ValueEditor";
+import { getSpec, ReverseState } from "../../modes/reverse";
 import { ReverseProxyProtocols } from "../../backends/consts";
+import { ServerInfo } from "../../ducks/backendState";
+import ValueEditor from "../editors/ValueEditor";
+import { ServerStatus } from "./CaptureSetup";
+import { ModeToggle } from "./ModeToggle";
+import { Popover } from "./Popover";
+
+interface ReverseToggleRowProps {
+    removable: boolean;
+    server: ReverseState;
+    backendState?: ServerInfo;
+}
 
 export default function Reverse() {
     const dispatch = useAppDispatch();
 
-    const { active, protocol, error, listen_port, listen_host, destination } =
-        useAppSelector((state) => state.modes.reverse);
-
-    const protocols = Object.values(ReverseProxyProtocols);
-
-    const inner = (
-        <span>
-            &nbsp;<b>{protocol} </b>
-            <span className="caret" />
-        </span>
-    );
-
-    const handleProtocolChange = (protocol: string) => {
-        dispatch(setProtocol(protocol as ReverseProxyProtocols));
-    };
-
-    const handleListenHostAndPortChange = (config: string) => {
-        const [host, port] = config.split(":");
-        // FIXME: We should eventually cast to Number and validate.
-        dispatch(setListenConfig(port as unknown as number, host));
-    };
-
-    const handleDestinationChange = (host: string) => {
-        dispatch(setDestination(host));
-    };
+    const servers = useAppSelector((state) => state.modes.reverse);
+    const backendState = useAppSelector((state) => state.backendState.servers);
 
     return (
         <div>
@@ -46,51 +35,117 @@ export default function Reverse() {
             <p className="mode-description">
                 Requests are forwarded to a preconfigured destination.
             </p>
+            <div className="mode-reverse-servers">
+                {servers.map((server, i) => (
+                    <ReverseToggleRow
+                        key={server.ui_id}
+                        removable={i > 0}
+                        server={server}
+                        backendState={backendState[getSpec(server)]}
+                    />
+                ))}
+                <div
+                    className="mode-reverse-add-server"
+                    onClick={() => dispatch(addServer())}
+                >
+                    <i className="fa fa-plus-square-o" aria-hidden="true"></i>
+                    Add additional server
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ReverseToggleRow({
+    removable,
+    server,
+    backendState,
+}: ReverseToggleRowProps) {
+    const dispatch = useAppDispatch();
+
+    const protocols = Object.values(ReverseProxyProtocols);
+
+    const deleteServer = async () => {
+        if (server.active) {
+            await dispatch(setActive({ server, value: false })).unwrap();
+        }
+        await dispatch(removeServer(server));
+    };
+
+    const error = server.error || backendState?.last_exception || undefined;
+
+    return (
+        <div>
             <ModeToggle
-                value={active}
+                value={server.active}
+                label="Forward"
                 onChange={() => {
-                    dispatch(toggleReverse());
+                    dispatch(setActive({ server, value: !server.active }));
                 }}
             >
-                Forward
-                <Dropdown
-                    text={inner}
-                    className="btn btn-default btn-xs mode-reverse-dropdown"
-                    options={{ placement: "bottom" }}
+                <select
+                    name="protocols"
+                    className="mode-reverse-dropdown"
+                    value={server.protocol}
+                    onChange={(e) => {
+                        dispatch(
+                            setProtocol({
+                                server,
+                                value: e.target.value as ReverseProxyProtocols,
+                            }),
+                        );
+                    }}
                 >
                     {protocols.map((prot) => (
-                        <MenuItem
-                            key={prot}
-                            onClick={() => handleProtocolChange(prot)}
-                        >
+                        <option key={prot} value={prot}>
                             {prot}
-                        </MenuItem>
+                        </option>
                     ))}
-                </Dropdown>{" "}
-                traffic from{" "}
+                </select>
+                traffic to
                 <ValueEditor
                     className="mode-reverse-input"
-                    content={
-                        listen_host && listen_port
-                            ? `${listen_host?.toString()}:${listen_port?.toString()}`
-                            : ""
-                    }
-                    onEditDone={(config) =>
-                        handleListenHostAndPortChange(config)
-                    }
-                    placeholder="*:8080"
-                />{" "}
-                to{" "}
-                <ValueEditor
-                    className="mode-reverse-input"
-                    content={destination?.toString() || ""}
-                    onEditDone={(destination) =>
-                        handleDestinationChange(destination)
+                    content={server.destination?.toString() || ""}
+                    onEditDone={(value) =>
+                        dispatch(setDestination({ server, value }))
                     }
                     placeholder="example.com"
                 />
+                <Popover iconClass="fa fa-cog">
+                    <h4>Advanced Configuration</h4>
+                    <p>Listen Host</p>
+                    <ValueEditor
+                        className="mode-reverse-input"
+                        content={server.listen_host || ""}
+                        onEditDone={(value) =>
+                            dispatch(setListenHost({ server, value }))
+                        }
+                        placeholder="*"
+                    />
+                    <p>Listen Port</p>
+                    <ValueEditor
+                        className="mode-reverse-input"
+                        content={String(server.listen_port || "")}
+                        onEditDone={(value) =>
+                            dispatch(
+                                setListenPort({
+                                    server,
+                                    value: value as unknown as number,
+                                }),
+                            )
+                        }
+                        placeholder="8080"
+                    />
+                </Popover>
+                {removable && (
+                    <i
+                        className="fa fa-fw fa-trash fa-lg"
+                        aria-hidden="true"
+                        onClick={deleteServer}
+                    ></i>
+                )}
             </ModeToggle>
-            {error && <div className="mode-error text-danger">{error}</div>}
+            <ServerStatus error={error} backendState={backendState} />
         </div>
     );
 }

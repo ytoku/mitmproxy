@@ -8,6 +8,8 @@ import { TBackendState } from "./_tbackendstate";
 import { configureStore } from "@reduxjs/toolkit";
 import { Tab } from "../../ducks/ui/tabs";
 import { LogLevel } from "../../ducks/eventLog";
+import { ReverseProxyProtocols } from "../../backends/consts";
+import { defaultReverseState } from "../../modes/reverse";
 
 export { THTTPFlow as TFlow, TTCPFlow, TUDPFlow };
 
@@ -131,19 +133,68 @@ export const testState: RootState = {
         visible: false,
     },
     modes: {
-        regular: {
-            active: true,
-        },
-        local: {
-            active: false,
-            applications: "",
-        },
-        wireguard: {
-            active: false,
-        },
-        reverse: {
-            active: false,
-        },
+        regular: [
+            {
+                active: true,
+            },
+        ],
+        local: [
+            {
+                active: false,
+                selectedProcesses: "",
+            },
+        ],
+        wireguard: [
+            {
+                active: false,
+            },
+        ],
+        reverse: [
+            {
+                active: false,
+                protocol: ReverseProxyProtocols.HTTPS,
+                destination: "example.com",
+            },
+            defaultReverseState(),
+        ],
+        transparent: [
+            {
+                active: false,
+            },
+        ],
+        socks: [
+            {
+                active: false,
+            },
+        ],
+        upstream: [
+            {
+                active: false,
+                destination: "example.com",
+            },
+        ],
+        dns: [
+            {
+                active: false,
+            },
+        ],
+    },
+    processes: {
+        currentProcesses: [
+            {
+                is_visible: true,
+                executable: "curl.exe",
+                is_system: false,
+                display_name: "curl",
+            },
+            {
+                is_visible: true,
+                executable: "http.exe",
+                is_system: false,
+                display_name: "http",
+            },
+        ],
+        isLoading: false,
     },
 };
 

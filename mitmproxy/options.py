@@ -21,6 +21,16 @@ class Options(optmanager.OptManager):
             False,
             "Use the Host header to construct URLs for display.",
         )
+        self.add_option(
+            "show_ignored_hosts",
+            bool,
+            False,
+            """
+            Record ignored flows in the UI even if we do not perform TLS interception.
+            This option will keep ignored flows' contents in memory, which can greatly increase memory usage.
+            A future release will fix this issue, record ignored flows by default, and remove this option.
+            """,
+        )
 
         # Proxy options
         self.add_option(
@@ -148,12 +158,6 @@ class Options(optmanager.OptManager):
             bool,
             True,
             "Enable/disable support for QUIC and HTTP/3. Enabled by default.",
-        )
-        self.add_option(
-            "experimental_transparent_http3",
-            bool,
-            False,
-            "Experimental support for QUIC in transparent mode. This option is for development only and will be removed soon.",
         )
         self.add_option(
             "http_connect_send_host_header",
