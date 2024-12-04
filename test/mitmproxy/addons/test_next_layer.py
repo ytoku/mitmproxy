@@ -103,7 +103,7 @@ dns_query = bytes.fromhex("002a01000001000000000000076578616d706c6503636f6d00000
 
 # Custom protocol with just base64-encoded messages
 # https://github.com/mitmproxy/mitmproxy/pull/7087
-custom_base64_proto = b"AAAAAAAAAAAAAAAAAAAAAA=="
+custom_base64_proto = b"AAAAAAAAAAAAAAAAAAAAAA==\n"
 
 http_get = b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
 http_get_absolute = b"GET http://example.com/ HTTP/1.1\r\n\r\n"
@@ -404,7 +404,7 @@ class TestNextLayer:
             assert nl._next_layer(m.context, http_get, b"").flow is not None
 
     def test_next_layer(self, monkeypatch, caplog):
-        caplog.set_level(logging.INFO)
+        caplog.set_level(logging.DEBUG)
         nl = NextLayer()
 
         with taddons.context(nl) as tctx:

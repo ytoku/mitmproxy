@@ -109,8 +109,8 @@ class NextLayer:
                 nextlayer.data_server(),
             )
         except NeedsMoreData:
-            logger.info(
-                f"Deferring layer decision, not enough data: {nextlayer.data_client().hex()}"
+            logger.debug(
+                f"Deferring layer decision, not enough data: {nextlayer.data_client().hex()!r}"
             )
 
     def _next_layer(
@@ -182,9 +182,10 @@ class NextLayer:
         probably_no_http = (
             # the first three bytes should be the HTTP verb, so A-Za-z is expected.
             len(data_client) < 3
-            # HTTP would require whitespace before the first newline
-            # if we have neither whitespace nor a newline, it's also unlikely to be HTTP.
-            or (data_client.find(b" ") >= data_client.find(b"\n"))
+            # HTTP would require whitespace...
+            or b" " not in data_client
+            # ...and that whitespace needs to be in the first line.
+            or (data_client.find(b" ") > data_client.find(b"\n"))
             or not data_client[:3].isalpha()
             # a server greeting would be uncharacteristic.
             or data_server
