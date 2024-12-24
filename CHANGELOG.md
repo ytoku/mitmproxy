@@ -8,6 +8,19 @@
 ## Unreleased: mitmproxy next
 
 
+## 05 December 2024: mitmproxy 11.0.2
+
+- Stop sorting keys in JSON contentview
+  ([#7346](https://github.com/mitmproxy/mitmproxy/pull/7346), @injust)
+- Fix a bug where a custom CA would raise an error.
+  ([#7355](https://github.com/mitmproxy/mitmproxy/pull/7355), @nneonneo)
+- Fix a bug where the mitmproxy UI would crash on negative durations.
+  ([#7358](https://github.com/mitmproxy/mitmproxy/pull/7358), @mhils)
+- Allow technically invalid HTTP transfer encodings in requests if `validate_inbound_headers` is disabled.
+  ([#7361](https://github.com/mitmproxy/mitmproxy/pull/7361), [#7373](https://github.com/mitmproxy/mitmproxy/pull/7373), @mhils)
+- Fix a bug in windows management in mitmproxy TUI whereby the help window does not appear if "?" is pressed within the overlay
+  ([#6500](https://github.com/mitmproxy/mitmproxy/pull/6500), @emanuele-em)
+
 ## 24 November 2024: mitmproxy 11.0.1
 
 - Tighten HTTP detection heuristic to better support custom TCP-based protocols.

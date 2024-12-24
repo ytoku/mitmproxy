@@ -113,10 +113,15 @@ def expected_http_body_size(
             case "compress" | "deflate" | "gzip" | "identity":
                 if response:
                     return -1
+                # These values are valid for responses only (not requests), which is ensured in
+                # mitmproxy.net.http.validate. If users have explicitly disabled header validation,
+                # we strive for maximum compatibility with weird clients.
+                if te == "identity" or "content-length" in headers:
+                    pass  # Content-Length or 0
                 else:
-                    raise ValueError(
-                        "Invalid request transfer encoding, message body cannot be determined reliably."
-                    )
+                    return (
+                        -1
+                    )  # compress/deflate/gzip with no content-length -> read until eof
             case other:  # pragma: no cover
                 typing.assert_never(other)
 

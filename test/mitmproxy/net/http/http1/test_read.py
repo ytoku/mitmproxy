@@ -120,15 +120,32 @@ def test_expected_http_body_size():
             treq(headers=Headers(transfer_encoding="qux")),
         )
     # transfer-encoding: gzip
-    with pytest.raises(ValueError, match="Invalid request transfer encoding"):
-        expected_http_body_size(
-            treq(headers=Headers(transfer_encoding="gzip")),
-        )
     assert (
         expected_http_body_size(
             treq(),
             tresp(headers=Headers(transfer_encoding="gzip")),
         )
+        == -1
+    )
+    # requests with non-chunked transfer encoding.
+    # technically invalid, but we want to maximize compatibility if validate_inbound_headers is false.
+    assert (
+        expected_http_body_size(
+            treq(headers=Headers(transfer_encoding="identity", content_length="42")),
+            None,
+        )
+        == 42
+    )
+    # Example of a misbehaving client:
+    # https://github.com/tensorflow/tensorflow/blob/fd9471e7d48e8e86684c847c0e1897c76e737805/third_party/xla/xla/tsl/platform/cloud/curl_http_request.cc
+    assert (
+        expected_http_body_size(
+            treq(headers=Headers(transfer_encoding="identity")), None
+        )
+        == 0
+    )
+    assert (
+        expected_http_body_size(treq(headers=Headers(transfer_encoding="gzip")), None)
         == -1
     )
 
