@@ -1,5 +1,6 @@
 import { isEqual } from "lodash";
 import * as React from "react";
+import { ContentViewData } from "./components/contentviews/useContentView";
 
 window.React = React;
 
@@ -32,19 +33,22 @@ export const formatTimeDelta = function (milliseconds) {
 
 export const formatTimeStamp = function (
     seconds: number,
-    { milliseconds = true } = {},
+    { includeMilliseconds = true } = {},
 ) {
-    let dt = new Date(seconds * 1000);
-    let year = dt.getFullYear();
-    let month = (1 + dt.getMonth()).toString().padStart(2, "0");
-    let day = dt.getDate().toString().padStart(2, "0");
-    let hours = dt.getHours().toString().padStart(2, "0");
-    let minutes = dt.getMinutes().toString().padStart(2, "0");
-    let part_seconds = dt.getSeconds().toString().padStart(2, "0");
-    let part_milliseconds = dt.getMilliseconds().toString().padStart(3, "0");
-    let ts = `${year}-${month}-${day} ${hours}:${minutes}:${part_seconds}.${part_milliseconds}`;
-    if (!milliseconds) ts = ts.slice(0, -4);
-    return ts;
+    const date = new Date(seconds * 1000);
+
+    const yearStr = String(date.getFullYear());
+    const monthStr = String(date.getMonth() + 1).padStart(2, "0");
+    const dayStr = String(date.getDate()).padStart(2, "0");
+    const hourStr = String(date.getHours()).padStart(2, "0");
+    const minuteStr = String(date.getMinutes()).padStart(2, "0");
+    const secondStr = String(date.getSeconds()).padStart(2, "0");
+    const millisecondStr = String(date.getMilliseconds()).padStart(3, "0");
+
+    let timestamp = `${yearStr}-${monthStr}-${dayStr} ${hourStr}:${minuteStr}:${secondStr}`;
+    if (includeMilliseconds) timestamp += `.${millisecondStr}`;
+
+    return timestamp;
 };
 
 export function formatAddress(address: [string, number]): string {
@@ -68,12 +72,7 @@ export function reverseString(s) {
     );
 }
 
-function getCookie(name) {
-    const r = document.cookie.match(new RegExp("\\b" + name + "=([^;]*)\\b"));
-    return r ? r[1] : undefined;
-}
-
-const xsrf = getCookie("_xsrf");
+const xsrf = document.currentScript?.getAttribute("data-xsrf");
 
 export function fetchApi(
     url: string,
@@ -189,6 +188,12 @@ export async function copyToClipboard(
     }
 }
 
+export async function copyViewContentDataToClipboard(
+    contentViewData: ContentViewData | undefined,
+) {
+    await copyToClipboard(Promise.resolve(contentViewData?.text || ""));
+}
+
 export function rpartition(str: string, sep: string): [string, string] {
     const lastIndex = str.lastIndexOf(sep);
     if (lastIndex === -1) {
@@ -208,4 +213,9 @@ export function partition(str: string, sep: string): [string, string] {
     const before = str.slice(0, index);
     const after = str.slice(index + sep.length);
     return [before, after];
+}
+
+/* istanbul ignore next @preserve */
+export function assertNever(val: never): never {
+    throw new Error(`Unreachable: ${JSON.stringify(val)}`);
 }

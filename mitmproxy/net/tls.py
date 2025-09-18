@@ -203,6 +203,9 @@ def create_proxy_server_context(
         except SSL.Error as e:
             raise RuntimeError(f"Cannot load TLS client certificate: {e}") from e
 
+        # https://github.com/mitmproxy/mitmproxy/discussions/7550
+        SSL._lib.SSL_CTX_set_post_handshake_auth(context._context, 1)  # type: ignore
+
     if legacy_server_connect:
         context.set_options(OP_LEGACY_SERVER_CONNECT)
 
@@ -255,7 +258,7 @@ def create_client_proxy_context(
         context.set_verify(Verify.VERIFY_NONE.value, None)
 
     for i in extra_chain_certs:
-        context.add_extra_chain_cert(i.to_pyopenssl())
+        context.add_extra_chain_cert(i.to_cryptography())
 
     if dhparams:
         res = SSL._lib.SSL_CTX_set_tmp_dh(context._context, dhparams)  # type: ignore

@@ -7,8 +7,6 @@ from mitmproxy.utils import asyncio_utils
 
 
 class KeepServing:
-    _watch_task: asyncio.Task | None = None
-
     def load(self, loader):
         loader.add_option(
             "keepserving",
@@ -22,10 +20,14 @@ class KeepServing:
         )
 
     def keepgoing(self) -> bool:
+        # Checking for proxyserver.active_connections is important for server replay,
+        # the addon may report that replay is finished but not the entire response has been sent yet.
+        # (https://github.com/mitmproxy/mitmproxy/issues/7569)
         checks = [
             "readfile.reading",
             "replay.client.count",
             "replay.server.count",
+            "proxyserver.active_connections",
         ]
         return any([ctx.master.commands.call(c) for c in checks])
 
@@ -45,6 +47,8 @@ class KeepServing:
             ctx.options.rfile,
         ]
         if any(opts) and not ctx.options.keepserving:
-            self._watch_task = asyncio_utils.create_task(
-                self.watch(), name="keepserving"
+            asyncio_utils.create_task(
+                self.watch(),
+                name="keepserving",
+                keep_ref=True,
             )

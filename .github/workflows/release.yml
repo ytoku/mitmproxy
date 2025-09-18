@@ -22,15 +22,13 @@ jobs:
     environment: deploy-release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GH_PUSH_TOKEN }}  # this token works to push to the protected main branch.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .github/node-version.txt
-      - uses: actions/setup-python@v5
-        with:
-          python-version-file: .github/python-version.txt
+      - uses: mhils/workflows/setup-python@16608e9df5912db0e3ad86a9b90e25e933f2496b
       - run: ./release/release.py ${{ inputs.version }} ${{ inputs.skip-branch-status-check }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # this token works with the GraphQL API

@@ -243,6 +243,9 @@ def rle_append_beginning_modify(rle, a_r):
 
 
 def colorize_host(host: str):
+    if not host:
+        return []
+
     tld = get_tld(host)
     sld = get_sld(host)
 
@@ -779,8 +782,11 @@ def format_flow(
             error_message=error_message,
         )
     elif isinstance(f, DNSFlow):
-        if f.response:
+        if f.request.timestamp and f.response and f.response.timestamp:
             duration = f.response.timestamp - f.request.timestamp
+        else:
+            duration = None
+        if f.response:
             response_code_str: str | None = dns.response_codes.to_str(
                 f.response.response_code
             )
@@ -789,7 +795,6 @@ def format_flow(
             )
             answer = ", ".join(str(x) for x in f.response.answers)
         else:
-            duration = None
             response_code_str = None
             response_code_http_equiv = 0
             answer = None

@@ -9,6 +9,7 @@ export interface ValueEditorProps {
     onInput?: (newVal: string) => void;
     onKeyDown?: (e: React.KeyboardEvent<HTMLSpanElement>) => void;
     placeholder?: string;
+    selectAllOnClick?: boolean;
 }
 
 /** "plaintext-only" for browsers which support it, "true" for everyone else */
@@ -69,11 +70,13 @@ export default class ValueEditor extends Component<ValueEditorProps> {
             this.input.current.focus();
             this.suppress_events = false;
 
-            const range = document.createRange();
-            range.selectNodeContents(this.input.current);
-            const sel = window.getSelection();
-            sel?.removeAllRanges();
-            sel?.addRange(range);
+            if (this.props.selectAllOnClick) {
+                const range = document.createRange();
+                range.selectNodeContents(this.input.current);
+                const sel = window.getSelection();
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+            }
 
             this.props.onEditStart?.();
         });
@@ -108,7 +111,7 @@ export default class ValueEditor extends Component<ValueEditorProps> {
      */
     private suppress_events = false;
     onMouseDown = (_e: React.MouseEvent) => {
-        EVENT_DEBUG && console.debug("onMouseDown", this.suppress_events);
+        if (EVENT_DEBUG) console.debug("onMouseDown", this.suppress_events);
         this.suppress_events = true;
         window.addEventListener("mouseup", this.onMouseUp, { once: true });
     };
@@ -117,7 +120,7 @@ export default class ValueEditor extends Component<ValueEditorProps> {
         const still_on_elem = e.target === this.input.current;
         const has_not_selected_text = !window.getSelection()?.toString();
 
-        EVENT_DEBUG &&
+        if (EVENT_DEBUG)
             console.warn(
                 "mouseUp",
                 this.suppress_events,
@@ -125,18 +128,24 @@ export default class ValueEditor extends Component<ValueEditorProps> {
                 has_not_selected_text,
             );
 
-        if (still_on_elem && has_not_selected_text) {
-            this.startEditing();
+        if (this.props.selectAllOnClick) {
+            if (still_on_elem && has_not_selected_text) {
+                this.startEditing();
+            }
+        } else {
+            if (still_on_elem) {
+                this.startEditing();
+            }
         }
         this.suppress_events = false;
     };
 
     onClick = (_e: React.MouseEvent) => {
-        EVENT_DEBUG && console.debug("onClick", this.suppress_events);
+        if (EVENT_DEBUG) console.debug("onClick", this.suppress_events);
     };
 
     onFocus = (_e: React.FocusEvent) => {
-        EVENT_DEBUG &&
+        if (EVENT_DEBUG)
             console.debug("onFocus", this.props.content, this.suppress_events);
         if (!this.input.current) throw "unreachable";
         if (this.suppress_events) return;
@@ -148,14 +157,14 @@ export default class ValueEditor extends Component<ValueEditorProps> {
     };
 
     onBlur = (_e: React.FocusEvent<HTMLSpanElement>) => {
-        EVENT_DEBUG &&
+        if (EVENT_DEBUG)
             console.debug("onBlur", this.props.content, this.suppress_events);
         if (this.suppress_events) return;
         this.finishEditing();
     };
 
     onKeyDown = (e: React.KeyboardEvent<HTMLSpanElement>) => {
-        EVENT_DEBUG && console.debug("keydown", e);
+        if (EVENT_DEBUG) console.debug("keydown", e);
         e.stopPropagation();
         switch (e.key) {
             case "Escape":

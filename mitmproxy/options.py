@@ -19,7 +19,10 @@ class Options(optmanager.OptManager):
             "showhost",
             bool,
             False,
-            "Use the Host header to construct URLs for display.",
+            """Use the Host header to construct URLs for display.
+
+            This option is disabled by default because malicious apps may send misleading host headers to evade
+            your analysis. If this is not a concern, enable this options for better flow display.""",
         )
         self.add_option(
             "show_ignored_hosts",
@@ -171,7 +174,10 @@ class Options(optmanager.OptManager):
             "ssl_insecure",
             bool,
             False,
-            "Do not verify upstream server SSL/TLS certificates.",
+            """Do not verify upstream server SSL/TLS certificates.
+
+            If this option is enabled, certificate validation is skipped and mitmproxy itself will be vulnerable to
+            TLS interception.""",
         )
         self.add_option(
             "ssl_verify_upstream_trusted_confdir",
@@ -224,6 +230,12 @@ class Options(optmanager.OptManager):
             """
             TLS key size for certificates and CA.
             """,
+        )
+        self.add_option(
+            "protobuf_definitions",
+            Optional[str],
+            None,
+            "Path to a .proto file that's used to resolve Protobuf field names when pretty-printing.",
         )
 
         self.update(**kwargs)

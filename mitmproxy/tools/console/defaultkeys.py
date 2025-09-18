@@ -76,7 +76,7 @@ def map(km: Keymap) -> None:
     km.add(
         "x",
         """
-        console.choose.cmd Format export.formats
+        console.choose.cmd "Export as..." export.formats
         console.command export.file {choice} @focus
         """,
         ["flowlist", "flowview"],
@@ -114,7 +114,7 @@ def map(km: Keymap) -> None:
     km.add(
         "o",
         """
-        console.choose.cmd Order view.order.options
+        console.choose.cmd "Order flows by..." view.order.options
         set view_order {choice}
         """,
         ["flowlist"],
@@ -139,9 +139,17 @@ def map(km: Keymap) -> None:
         "Revert changes to this flow",
     )
     km.add("X", "flow.kill @focus", ["flowlist"], "Kill this flow")
-    km.add("z", "view.flows.remove @all", ["flowlist"], "Clear flow list")
     km.add(
-        "Z", "view.flows.remove @hidden", ["flowlist"], "Purge all flows not showing"
+        "z",
+        'console.command.confirm "Delete all flows" view.flows.remove @all',
+        ["flowlist"],
+        "Clear flow list",
+    )
+    km.add(
+        "Z",
+        'console.command.confirm "Purge all hidden flows" view.flows.remove @hidden',
+        ["flowlist"],
+        "Purge all flows not showing",
     )
     km.add(
         "|",
@@ -153,7 +161,7 @@ def map(km: Keymap) -> None:
     km.add(
         "e",
         """
-        console.choose.cmd Part console.edit.focus.options
+        console.choose.cmd "Edit..." console.edit.focus.options
         console.edit.focus {choice}
         """,
         ["flowlist", "flowview"],
@@ -171,7 +179,7 @@ def map(km: Keymap) -> None:
     km.add(
         "v",
         """
-        console.choose "View Part" request,response
+        console.choose "View..." request,response
         console.bodyview @focus {choice}
         """,
         ["flowview"],
@@ -181,7 +189,7 @@ def map(km: Keymap) -> None:
     km.add(
         "m",
         """
-        console.choose.cmd Mode console.flowview.mode.options
+        console.choose.cmd "Set contentview..." console.flowview.mode.options
         console.flowview.mode.set {choice}
         """,
         ["flowview"],
@@ -190,7 +198,7 @@ def map(km: Keymap) -> None:
     km.add(
         "z",
         """
-        console.choose "Part" request,response
+        console.choose "Encode/decode..." request,response
         flow.encode.toggle @focus {choice}
         """,
         ["flowview"],
@@ -227,7 +235,12 @@ def map(km: Keymap) -> None:
         "Save data to file as CSV",
     )
 
-    km.add("z", "eventstore.clear", ["eventlog"], "Clear")
+    km.add(
+        "z",
+        'console.command.confirm "Clear event log" eventstore.clear',
+        ["eventlog"],
+        "Clear",
+    )
 
     km.add(
         "a",

@@ -34,9 +34,11 @@ Headers:
 """
 
 import functools
+import os
 import re
 import sys
 from collections.abc import Sequence
+from typing import Any
 from typing import ClassVar
 from typing import Protocol
 
@@ -47,6 +49,10 @@ from mitmproxy import flow
 from mitmproxy import http
 from mitmproxy import tcp
 from mitmproxy import udp
+
+maybe_ignore_case = (
+    re.IGNORECASE if os.environ.get("MITMPROXY_CASE_SENSITIVE_FILTERS") != "1" else 0
+)
 
 
 def only(*types):
@@ -180,7 +186,7 @@ class _Rex(_Action):
         if self.is_binary:
             expr = expr.encode()
         try:
-            self.re = re.compile(expr, self.flags)
+            self.re = re.compile(expr, self.flags | maybe_ignore_case)
         except Exception:
             raise ValueError("Cannot compile expression.")
 
@@ -315,9 +321,9 @@ class FBod(_Rex):
                 if msg.content is not None and self.re.search(msg.content):
                     return True
         elif isinstance(f, dns.DNSFlow):
-            if f.request and self.re.search(f.request.content):
+            if f.request and self.re.search(str(f.request).encode()):
                 return True
-            if f.response and self.re.search(f.response.content):
+            if f.response and self.re.search(str(f.response).encode()):
                 return True
         return False
 
@@ -345,7 +351,7 @@ class FBodRequest(_Rex):
                 if msg.from_client and self.re.search(msg.content):
                     return True
         elif isinstance(f, dns.DNSFlow):
-            if f.request and self.re.search(f.request.content):
+            if f.request and self.re.search(str(f.request).encode()):
                 return True
 
 
@@ -372,14 +378,13 @@ class FBodResponse(_Rex):
                 if not msg.from_client and self.re.search(msg.content):
                     return True
         elif isinstance(f, dns.DNSFlow):
-            if f.response and self.re.search(f.response.content):
+            if f.response and self.re.search(str(f.response).encode()):
                 return True
 
 
 class FMethod(_Rex):
     code = "m"
     help = "Method"
-    flags = re.IGNORECASE
 
     @only(http.HTTPFlow)
     def __call__(self, f):
@@ -389,7 +394,6 @@ class FMethod(_Rex):
 class FDomain(_Rex):
     code = "d"
     help = "Domain"
-    flags = re.IGNORECASE
     is_binary = False
 
     @only(http.HTTPFlow)
@@ -403,7 +407,6 @@ class FUrl(_Rex):
     code = "u"
     help = "URL"
     is_binary = False
-    flags = re.IGNORECASE
 
     # FUrl is special, because it can be "naked".
 
@@ -432,7 +435,7 @@ class FSrc(_Rex):
         if not f.client_conn or not f.client_conn.peername:
             return False
         r = f"{f.client_conn.peername[0]}:{f.client_conn.peername[1]}"
-        return f.client_conn.peername and self.re.search(r)
+        return self.re.search(r)
 
 
 class FDst(_Rex):
@@ -444,7 +447,7 @@ class FDst(_Rex):
         if not f.server_conn or not f.server_conn.address:
             return False
         r = f"{f.server_conn.address[0]}:{f.server_conn.address[1]}"
-        return f.server_conn.address and self.re.search(r)
+        return self.re.search(r)
 
 
 class FReplay(_Action):
@@ -626,15 +629,16 @@ def _make():
     parts.append(f)
 
     atom = pp.MatchFirst(parts)
-    expr = pp.infixNotation(
-        atom,
-        [
-            (pp.Literal("!").suppress(), 1, pp.opAssoc.RIGHT, lambda x: FNot(*x)),
-            (pp.Literal("&").suppress(), 2, pp.opAssoc.LEFT, lambda x: FAnd(*x)),
-            (pp.Literal("|").suppress(), 2, pp.opAssoc.LEFT, lambda x: FOr(*x)),
-        ],
+    expr = pp.OneOrMore(
+        pp.infixNotation(
+            atom,
+            [
+                (pp.Literal("!").suppress(), 1, pp.opAssoc.RIGHT, lambda x: FNot(*x)),
+                (pp.Literal("&").suppress(), 2, pp.opAssoc.LEFT, lambda x: FAnd(*x)),
+                (pp.Literal("|").suppress(), 2, pp.opAssoc.LEFT, lambda x: FOr(*x)),
+            ],
+        )
     )
-    expr = pp.OneOrMore(expr)
     return expr.setParseAction(lambda x: FAnd(x) if len(x) != 1 else x)
 
 
@@ -644,7 +648,9 @@ bnf = _make()
 class TFilter(Protocol):
     pattern: str
 
-    def __call__(self, f: flow.Flow) -> bool: ...  # pragma: no cover
+    # TODO: This should be `-> bool`, but some filters aren't behaving correctly (requiring `bool()` by the caller).
+    #       Correct this when we properly type filters.
+    def __call__(self, f: flow.Flow) -> Any: ...  # pragma: no cover
 
 
 def parse(s: str) -> TFilter:

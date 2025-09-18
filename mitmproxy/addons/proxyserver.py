@@ -120,17 +120,18 @@ class Proxyserver(ServerManager):
 
     is_running: bool
     _connect_addr: Address | None = None
-    _update_task: asyncio.Task | None = None
-    _inject_tasks: set[asyncio.Task]
 
     def __init__(self):
         self.connections = {}
         self.servers = Servers(self)
         self.is_running = False
-        self._inject_tasks = set()
 
     def __repr__(self):
         return f"Proxyserver({len(self.connections)} active conns)"
+
+    @command.command("proxyserver.active_connections")
+    def active_connections(self) -> int:
+        return len(self.connections)
 
     @contextmanager
     def register_connection(
@@ -143,6 +144,13 @@ class Proxyserver(ServerManager):
             del self.connections[connection_id]
 
     def load(self, loader):
+        loader.add_option(
+            "store_streamed_bodies",
+            bool,
+            False,
+            "Store HTTP request and response bodies when streamed (see `stream_large_bodies`). "
+            "This increases memory consumption, but makes it possible to inspect streamed bodies.",
+        )
         loader.add_option(
             "connection_strategy",
             str,
@@ -158,10 +166,10 @@ class Proxyserver(ServerManager):
             Optional[str],
             None,
             """
-            Stream data to the client if response body exceeds the given
+            Stream data to the client if request or response body exceeds the given
             threshold. If streamed, the body will not be stored in any way,
             and such responses cannot be modified. Understands k/m/g
-            suffixes, i.e. 3m for 3 megabytes.
+            suffixes, i.e. 3m for 3 megabytes. To store streamed bodies, see `store_streamed_bodies`.
             """,
         )
         loader.add_option(
@@ -289,8 +297,10 @@ class Proxyserver(ServerManager):
                     )
 
             if self.is_running:
-                self._update_task = asyncio_utils.create_task(
-                    self.servers.update(modes), name="update servers"
+                asyncio_utils.create_task(
+                    self.servers.update(modes),
+                    name="update servers",
+                    keep_ref=True,
                 )
 
     async def setup_servers(self) -> bool:
@@ -315,14 +325,12 @@ class Proxyserver(ServerManager):
         if connection_id not in self.connections:
             raise ValueError("Flow is not from a live connection.")
 
-        t = asyncio_utils.create_task(
+        asyncio_utils.create_task(
             self.connections[connection_id].server_event(event),
             name=f"inject_event",
+            keep_ref=True,
             client=event.flow.client_conn.peername,
         )
-        # Python 3.11 Use TaskGroup instead.
-        self._inject_tasks.add(t)
-        t.add_done_callback(self._inject_tasks.remove)
 
     @command.command("inject.websocket")
     def inject_websocket(

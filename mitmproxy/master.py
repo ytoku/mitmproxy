@@ -26,7 +26,7 @@ class Master:
 
     def __init__(
         self,
-        opts: options.Options,
+        opts: options.Options | None,
         event_loop: asyncio.AbstractEventLoop | None = None,
         with_termlog: bool = False,
     ):
@@ -65,8 +65,12 @@ class Master:
                 # This may block for some proxy modes, so we also monitor should_exit.
                 await asyncio.wait(
                     [
-                        asyncio.create_task(ps.setup_servers()),
-                        asyncio.create_task(self.should_exit.wait()),
+                        asyncio_utils.create_task(
+                            ps.setup_servers(), name="setup_servers", keep_ref=False
+                        ),
+                        asyncio_utils.create_task(
+                            self.should_exit.wait(), name="should_exit", keep_ref=False
+                        ),
                     ],
                     return_when=asyncio.FIRST_COMPLETED,
                 )

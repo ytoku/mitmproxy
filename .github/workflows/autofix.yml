@@ -13,14 +13,14 @@ jobs:
   autofix:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: mhils/workflows/checkout@16608e9df5912db0e3ad86a9b90e25e933f2496b
+      - uses: mhils/workflows/setup-uv@16608e9df5912db0e3ad86a9b90e25e933f2496b
+      - uses: mhils/workflows/uv-sync@16608e9df5912db0e3ad86a9b90e25e933f2496b
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version-file: .github/python-version.txt
-      - run: pip install -e .[dev]
       - run: ruff check --fix-only .
       - run: ruff format .
+
+      - run: uv lock
 
       - run: web/gen/all
 
@@ -37,4 +37,4 @@ jobs:
 
       - uses: mhils/add-pr-ref-in-changelog@main
 
-      - uses: autofix-ci/action@ff86a557419858bb967097bfc916833f5647fa8c
+      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
